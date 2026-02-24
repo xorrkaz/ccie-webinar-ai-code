@@ -1,0 +1,38 @@
+---
+# R1 - CML Host Variables
+# Role: eBGP speaker AS 65001, connected to R2 via Gi0/1
+# Management: GigabitEthernet0/0 (DHCP via bridge10, 192.168.10.207)
+
+# -----------------------------------------------------------------
+# Interface configuration
+# -----------------------------------------------------------------
+interfaces:
+  Loopback0:
+    description: "Router-ID and BGP source"
+    ip:           "1.1.1.1/32"
+  GigabitEthernet0/1:
+    description:  "Link to R2 (192.168.12.0/24)"
+    ip:           "192.168.12.1/24"
+
+# -----------------------------------------------------------------
+# Static routing
+# -----------------------------------------------------------------
+routing:
+  static_routes:
+    - prefix:      "3.3.3.3/32"
+      next_hop:    "192.168.12.2"
+      description: "Route to R3 loopback via R2 (transit)"
+
+# -----------------------------------------------------------------
+# BGP - R1 (AS 65001) peers with R2 (AS 65002)
+# -----------------------------------------------------------------
+bgp:
+  local_asn: 65001
+  router_id: 1.1.1.1
+  neighbors:
+    - ip:          "192.168.12.2"
+      remote_asn:  65002
+      description: "eBGP to R2"
+      update_source: GigabitEthernet0/1
+  networks:
+    - "10.1.1.0/24"

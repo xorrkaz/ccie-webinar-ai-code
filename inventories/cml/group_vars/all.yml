@@ -1,0 +1,29 @@
+---
+# CML Test Environment - Connection Variables
+# Plain-text credentials are acceptable here: this is a sandboxed lab
+# environment with no access to production systems or sensitive data.
+#
+# For production credentials, see:
+#   inventories/production/group_vars/vault.yml  (Ansible Vault encrypted)
+#   docs/credential-management.md
+
+ansible_network_os:       ios
+ansible_connection:       network_cli
+ansible_user:             admin
+ansible_password:         admin
+ansible_become:           true
+ansible_become_method:    enable
+ansible_become_password:  admin
+
+# IOSv 15.x uses ssh-rsa only (not rsa-sha2-256/512); must disable sha2 preference
+ansible_paramiko_use_rsa_sha2_algorithms: false
+# IOSv disconnects (code 2) on failed public-key auth; skip key lookup entirely
+ansible_paramiko_look_for_keys: false
+
+# Environment tag - used in playbooks to gate production-only safety checks
+# NOTE: 'environment' is a reserved Ansible variable name; use 'deploy_environment'
+deploy_environment: cml
+
+# CML lab identifier - cached to avoid repeated lookups by title
+cml_lab_id: "6f0e4b91-fdab-4118-9145-bd2d0664423d"
+cml_lab_title: "bgp-demo"

@@ -1,0 +1,112 @@
+---
+# Base Configuration Playbook
+# Deploys interface IP addressing, descriptions, and static routes.
+# Run this BEFORE deploy_bgp.yml to establish the data-plane baseline.
+#
+# Usage:
+#   CML (test):    ansible-playbook playbooks/base_config.yml
+#   Single host:   ansible-playbook playbooks/base_config.yml --limit R1
+#   Dry run:       ansible-playbook playbooks/base_config.yml --check --diff
+#   Production:    ansible-playbook -i inventories/production playbooks/base_config.yml
+#
+# Requires host_vars structure:
+#   interfaces:
+#     <IntfName>:
+#       description: "human-readable label"
+#       ip: "x.x.x.x/prefix"   # omit for unnumbered/management
+#   routing:
+#     static_routes:
+#       - prefix:      "x.x.x.x/prefix"
+#         next_hop:    "x.x.x.x"          # OR
+#         interface:   "Null0"             # for black-hole routes
+#         description: "optional label"
+
+- name: Deploy Base Interface and Routing Configuration
+  hosts: "{{ target_hosts | default('routers') }}"
+  gather_facts: false
+  connection: network_cli
+
+  tasks:
+
+    # --------------------------------------------------------
+    # 1. Enable interfaces and set descriptions
+    # --------------------------------------------------------
+    - name: "[base] Configure interface description and no shutdown"
+      cisco.ios.ios_config:
+        lines:
+          - "description {{ item.value.description | default('') }}"
+          - "no shutdown"
+        parents: "interface {{ item.key }}"
+      loop: "{{ interfaces | dict2items }}"
+      when: interfaces is defined
+      loop_control:
+        label: "{{ item.key }}"
+
+    # --------------------------------------------------------
+    # 2. Assign IP addresses
+    # --------------------------------------------------------
+    - name: "[base] Configure interface IP addresses"
+      cisco.ios.ios_config:
+        lines:
+          - "ip address {{ item.value.ip | ansible.utils.ipaddr('address') }} {{ item.value.ip | ansible.utils.ipaddr('netmask') }}"
+          - "no shutdown"
+        parents: "interface {{ item.key }}"
+      loop: "{{ interfaces | dict2items }}"
+      when:
+        - interfaces is defined
+        - item.value.ip is defined
+      loop_control:
+        label: "{{ item.key }} → {{ item.value.ip }}"
+
+    # --------------------------------------------------------
+    # 3. Configure static routes
+    #    Supports both IP next-hop and interface (e.g. Null0)
+    # --------------------------------------------------------
+    - name: "[base] Configure ip-next-hop static routes"
+      cisco.ios.ios_config:
+        lines:
+          - "ip route {{ item.prefix | ansible.utils.ipaddr('network') }} {{ item.prefix | ansible.utils.ipaddr('netmask') }} {{ item.next_hop }}{{ ' name ' + (item.description | replace(' ', '_')) if item.description is defined else '' }}"
+      loop: "{{ routing.static_routes | default([]) }}"
+      when:
+        - routing is defined
+        - routing.static_routes | default([]) | length > 0
+        - item.next_hop is defined
+      loop_control:
+        label: "{{ item.prefix }} via {{ item.next_hop }}"
+
+    - name: "[base] Configure interface (discard/Null0) static routes"
+      cisco.ios.ios_config:
+        lines:
+          - "ip route {{ item.prefix | ansible.utils.ipaddr('network') }} {{ item.prefix | ansible.utils.ipaddr('netmask') }} {{ item.interface }}{{ ' name ' + (item.description | replace(' ', '_')) if item.description is defined else '' }}"
+      loop: "{{ routing.static_routes | default([]) }}"
+      when:
+        - routing is defined
+        - routing.static_routes | default([]) | length > 0
+        - item.interface is defined
+      loop_control:
+        label: "{{ item.prefix }} via {{ item.interface | default('next-hop') }}"
+
+    # --------------------------------------------------------
+    # 4. Verify: show results for confirmation/CI logs
+    # --------------------------------------------------------
+    - name: "[base] Collect interface and route state"
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+          - show ip route static
+      register: verify_output
+
+    - name: "[base] Display interface summary"
+      ansible.builtin.debug:
+        msg: "{{ verify_output.stdout_lines[0] }}"
+
+    - name: "[base] Display static routes"
+      ansible.builtin.debug:
+        msg: "{{ verify_output.stdout_lines[1] }}"
+
+    # --------------------------------------------------------
+    # 5. Save running config
+    # --------------------------------------------------------
+    - name: "[base] Save running configuration"
+      cisco.ios.ios_config:
+        save_when: changed

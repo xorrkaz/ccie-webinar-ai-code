@@ -1,0 +1,11 @@
+---
+# Common BGP settings for all routers - SHARED ACROSS ENVIRONMENTS
+# This file intentionally mirrors inventories/cml/group_vars/routers.yml
+# Any changes here should be applied to the CML inventory as well, or
+# better: test the change in CML first, then promote here.
+
+bgp_defaults:
+  timers:
+    keepalive: 60
+    holdtime:  180
+  log_neighbor_changes: true

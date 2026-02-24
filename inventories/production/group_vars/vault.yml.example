@@ -1,0 +1,26 @@
+---
+# ANSIBLE VAULT TEMPLATE
+# ============================================================
+# This file shows the STRUCTURE of the vault - it is NOT the
+# actual vault file. It is safe to commit because it contains
+# no real credentials.
+#
+# To create the real vault.yml:
+#   1. Copy this file:
+#        cp vault.yml.example vault.yml
+#   2. Replace placeholder values with real credentials
+#   3. Encrypt it:
+#        ansible-vault encrypt inventories/production/group_vars/vault.yml
+#   4. Commit the encrypted file:
+#        git add inventories/production/group_vars/vault.yml
+#        git commit -m "feat(vault): add encrypted production credentials"
+#
+# To edit the vault later:
+#        ansible-vault edit inventories/production/group_vars/vault.yml
+#
+# Vault password management: see docs/credential-management.md
+# ============================================================
+
+vault_ansible_user:            "REPLACE_WITH_PROD_USERNAME"
+vault_ansible_password:        "REPLACE_WITH_PROD_PASSWORD"
+vault_ansible_enable_password: "REPLACE_WITH_PROD_ENABLE_SECRET"

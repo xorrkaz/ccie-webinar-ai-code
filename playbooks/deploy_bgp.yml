@@ -1,0 +1,88 @@
+---
+# Deploy BGP Configuration
+# Configures eBGP process, neighbors, and network advertisements.
+# Prerequisites: base_config.yml must have run successfully.
+#
+# Usage:
+#   All BGP routers:  ansible-playbook playbooks/deploy_bgp.yml
+#   Subset:           ansible-playbook playbooks/deploy_bgp.yml --limit R1,R2
+#   Production:       ansible-playbook -i inventories/production playbooks/deploy_bgp.yml
+#
+# Requires host_vars structure:
+#   bgp:
+#     local_asn: 65001
+#     router_id: 1.1.1.1
+#     neighbors:
+#       - ip: x.x.x.x
+#         remote_asn: 65002
+#         description: "..."
+#     networks:
+#       - "10.1.1.0/24"
+
+- name: Deploy BGP Configuration
+  hosts: "{{ target_hosts | default('routers') }}"
+  gather_facts: false
+  connection: network_cli
+
+  tasks:
+
+    # Skip routers that have no BGP config (e.g., R3 in baseline)
+    - name: "[bgp] Skip routers without BGP configuration"
+      ansible.builtin.meta: end_host
+      when: bgp is not defined
+
+    # --------------------------------------------------------
+    # 1. BGP process: AS number, router-id, global settings
+    # --------------------------------------------------------
+    - name: "[bgp] Configure BGP process and router-id"
+      cisco.ios.ios_config:
+        lines:
+          - "bgp router-id {{ bgp.router_id }}"
+          - "bgp log-neighbor-changes"
+        parents: "router bgp {{ bgp.local_asn }}"
+
+    # --------------------------------------------------------
+    # 2. BGP neighbors
+    # --------------------------------------------------------
+    - name: "[bgp] Configure BGP neighbor statements"
+      cisco.ios.ios_config:
+        lines:
+          - "neighbor {{ item.ip }} remote-as {{ item.remote_asn }}"
+          - "neighbor {{ item.ip }} description {{ item.description }}"
+          - "neighbor {{ item.ip }} timers {{ bgp_defaults.timers.keepalive }} {{ bgp_defaults.timers.holdtime }}"
+        parents: "router bgp {{ bgp.local_asn }}"
+      loop: "{{ bgp.neighbors }}"
+      loop_control:
+        label: "{{ item.ip }} (AS {{ item.remote_asn }})"
+
+    # --------------------------------------------------------
+    # 3. Network advertisements
+    #    IOS requires the network to exist in the RIB.
+    #    Black-hole (Null0) routes ensure the aggregate is present.
+    # --------------------------------------------------------
+    - name: "[bgp] Add Null0 black-hole routes for advertised prefixes"
+      cisco.ios.ios_config:
+        lines:
+          - "ip route {{ item | ansible.utils.ipaddr('network') }}\
+             {{ ' ' }}{{ item | ansible.utils.ipaddr('netmask') }}\
+             {{ ' ' }}Null0 name BGP_black_hole"
+      loop: "{{ bgp.networks }}"
+      loop_control:
+        label: "Null0 → {{ item }}"
+
+    - name: "[bgp] Configure BGP network advertisements"
+      cisco.ios.ios_config:
+        lines:
+          - "network {{ item | ansible.utils.ipaddr('network') }}\
+             {{ ' ' }}mask {{ item | ansible.utils.ipaddr('netmask') }}"
+        parents: "router bgp {{ bgp.local_asn }}"
+      loop: "{{ bgp.networks }}"
+      loop_control:
+        label: "network {{ item }}"
+
+    # --------------------------------------------------------
+    # 4. Save configuration
+    # --------------------------------------------------------
+    - name: "[bgp] Save running configuration"
+      cisco.ios.ios_config:
+        save_when: changed

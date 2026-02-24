@@ -1,0 +1,28 @@
+---
+# Production Environment - Connection Variables
+#
+# Credentials are sourced from Ansible Vault (vault.yml in this directory).
+# The vault file is committed to git ENCRYPTED. The vault password is NEVER
+# committed - it is provided at runtime via one of:
+#
+#   Option 1 (file):     --vault-password-file ~/.vault_pass
+#   Option 2 (env var):  ANSIBLE_VAULT_PASSWORD_FILE=~/.vault_pass
+#   Option 3 (prompt):   --ask-vault-pass
+#   Option 4 (CI/CD):    vault password stored in CI secrets manager
+#
+# See docs/credential-management.md for full setup instructions.
+
+ansible_network_os:       ios
+ansible_connection:       network_cli
+
+# Credentials injected from vault.yml (never plain-text in production)
+ansible_user:             "{{ vault_ansible_user }}"
+ansible_password:         "{{ vault_ansible_password }}"
+ansible_become:           true
+ansible_become_method:    enable
+ansible_become_password:  "{{ vault_ansible_enable_password }}"
+
+# Environment tag - gates production safety checks in playbooks
+# (e.g., diff-mode, explicit confirmation prompts, change windows)
+# NOTE: 'environment' is a reserved Ansible variable name; use 'deploy_environment'
+deploy_environment: production

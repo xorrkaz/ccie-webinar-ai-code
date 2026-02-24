@@ -1,0 +1,43 @@
+---
+# R3 - CML Host Variables
+# Role: Prepared for eBGP multihop demo (no BGP in baseline)
+# Management: GigabitEthernet0/0 (DHCP via bridge10, 192.168.10.212)
+#
+# NOTE: R3 is intentionally left without BGP configuration.
+#       BGP will be added to R3 in the multihop demo phase.
+#       See: docs/promotion-workflow.md for the demo walkthrough.
+
+# -----------------------------------------------------------------
+# Interface configuration
+# -----------------------------------------------------------------
+interfaces:
+  Loopback0:
+    description: "Router-ID (reserved for future BGP source)"
+    ip:          "3.3.3.3/32"
+  GigabitEthernet0/2:
+    description: "Link to R2 (192.168.23.0/24)"
+    ip:          "192.168.23.3/24"
+
+# -----------------------------------------------------------------
+# Static routing
+# -----------------------------------------------------------------
+routing:
+  static_routes:
+    - prefix:      "1.1.1.1/32"
+      next_hop:    "192.168.23.2"
+      description: "Route to R1 loopback via R2 (transit)"
+
+# -----------------------------------------------------------------
+# BGP - NOT configured in baseline (multihop demo placeholder)
+# -----------------------------------------------------------------
+# bgp:
+#   local_asn: 65003
+#   router_id: 3.3.3.3
+#   neighbors:
+#     - ip:          "1.1.1.1"          # eBGP multihop to R1 Loopback
+#       remote_asn:  65001
+#       description: "eBGP multihop to R1"
+#       ebgp_multihop: 2
+#       update_source: Loopback0
+#   networks:
+#     - "10.3.3.0/24"

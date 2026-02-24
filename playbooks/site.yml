@@ -1,0 +1,73 @@
+---
+# Site Playbook - Top-level orchestration for full deploy + validate cycle
+#
+# Usage:
+#   CML (test):  ansible-playbook playbooks/site.yml
+#   Production:  ansible-playbook -i inventories/production playbooks/site.yml
+#
+# Production ALWAYS requires a --check run first (diff mode).
+# The production safety gate task enforces a manual confirmation pause
+# when deploy_environment == 'production'.
+#
+# Recommended production workflow:
+#   # Step 1: Dry run (no changes applied)
+#   ansible-playbook -i inventories/production playbooks/site.yml --check --diff
+#
+#   # Step 2: Seek change approval
+#
+#   # Step 3: Live run (applies changes)
+#   ansible-playbook -i inventories/production playbooks/site.yml
+
+# ============================================================
+# PRODUCTION SAFETY GATE
+# Pauses for explicit operator confirmation before any changes
+# are applied in the production environment.
+# ============================================================
+- name: Production Safety Gate
+  hosts: routers
+  gather_facts: false
+  tasks:
+    - name: "[safety] Confirm production deployment"
+      ansible.builtin.pause:
+        prompt: |
+
+          ══════════════════════════════════════════════════
+           WARNING: PRODUCTION DEPLOYMENT
+          ══════════════════════════════════════════════════
+           Targets : {{ ansible_play_hosts | join(', ') }}
+           Inventory: {{ inventory_dir }}
+
+           Before proceeding, confirm:
+             [ ] --check / --diff run reviewed and approved
+             [ ] Change window is open
+             [ ] Rollback plan is ready
+             [ ] On-call team notified
+
+           Press ENTER to proceed, or Ctrl+C + A to abort.
+          ══════════════════════════════════════════════════
+      when:
+        - deploy_environment | default('cml') == 'production'
+        - not ansible_check_mode
+      run_once: true
+
+# ============================================================
+# BASE CONFIG
+# Deploy interfaces, IP addressing, and static routes first.
+# ============================================================
+- name: Deploy Base Interface and Routing Configuration
+  ansible.builtin.import_playbook: base_config.yml
+
+# ============================================================
+# DEPLOY
+# ============================================================
+- name: Deploy BGP Configuration
+  ansible.builtin.import_playbook: deploy_bgp.yml
+
+# ============================================================
+# VALIDATE
+# Post-deploy validation runs automatically. In --check mode
+# the deploy tasks are skipped but validation still runs
+# (against current device state) so you can verify baseline.
+# ============================================================
+- name: Validate BGP State
+  ansible.builtin.import_playbook: validate_bgp.yml

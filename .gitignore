@@ -1,0 +1,52 @@
+# ============================================================
+# Ansible Vault password files - NEVER commit these
+# ============================================================
+.vault_pass
+.vault_password
+vault_pass
+vault_password
+*.vault_pass
+*.vault_password
+
+# ============================================================
+# Ansible runtime artifacts
+# ============================================================
+*.retry
+*.log
+
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyw
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# ============================================================
+# Editor and OS artifacts
+# ============================================================
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/settings.json
+.vscode/mcp.json
+
+# ============================================================
+# Secrets and local overrides - NEVER commit these
+# ============================================================
+.env
+*.env
+secrets.yml
+local_vars.yml
+local.yml
+# Production vault is committed ENCRYPTED - see docs/credential-management.md
+# DO NOT add inventories/production/group_vars/vault.yml here

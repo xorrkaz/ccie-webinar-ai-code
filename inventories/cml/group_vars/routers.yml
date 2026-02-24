@@ -1,0 +1,7 @@
+---
+# Common BGP settings for all routers
+bgp_defaults:
+  timers:
+    keepalive: 60
+    holdtime: 180
+  log_neighbor_changes: true

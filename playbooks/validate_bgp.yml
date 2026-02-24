@@ -1,0 +1,107 @@
+---
+# Validate BGP Configuration and Connectivity
+# Works against both CML (test) and production inventories.
+#
+# Usage:
+#   CML:        ansible-playbook playbooks/validate_bgp.yml
+#   Production: ansible-playbook -i inventories/production playbooks/validate_bgp.yml
+#
+# Variables (override at runtime or in host_vars):
+#   target_hosts:  which group to target (default: routers)
+- name: Validate BGP State and Prefix Exchange
+  hosts: "{{ target_hosts | default('routers') }}"
+  gather_facts: false
+  connection: network_cli
+
+  tasks:
+    # --------------------------------------------------------
+    # 1. Gather raw BGP state
+    # --------------------------------------------------------
+    - name: "[bgp] Collect BGP summary"
+      cisco.ios.ios_command:
+        commands:
+          - show bgp ipv4 unicast summary
+      register: bgp_summary_raw
+
+    - name: "[bgp] Collect BGP routes installed in RIB"
+      cisco.ios.ios_command:
+        commands:
+          - show ip route bgp
+      register: bgp_routes_raw
+
+    # --------------------------------------------------------
+    # 2. Display output (always useful in CI logs)
+    # --------------------------------------------------------
+    - name: "[bgp] Show BGP summary"
+      debug:
+        msg: "{{ bgp_summary_raw.stdout_lines[0] }}"
+
+    - name: "[bgp] Show BGP routes"
+      debug:
+        msg: "{{ bgp_routes_raw.stdout_lines[0] }}"
+
+    # --------------------------------------------------------
+    # 3. Assert BGP neighbor health (routers with BGP config only)
+    # --------------------------------------------------------
+    - name: "[bgp] Assert no neighbor stuck in Idle state"
+      assert:
+        that:
+          - "' Idle ' not in bgp_summary_raw.stdout[0]"
+        fail_msg: >-
+          {{ inventory_hostname }}: BGP neighbor stuck in Idle state.
+          Output: {{ bgp_summary_raw.stdout[0] }}
+        success_msg: "{{ inventory_hostname }}: No neighbors in Idle state ✓"
+      when: bgp is defined
+
+    - name: "[bgp] Assert no neighbor stuck in Active state"
+      assert:
+        that:
+          - "' Active' not in bgp_summary_raw.stdout[0]"
+        fail_msg: >-
+          {{ inventory_hostname }}: BGP neighbor stuck in Active state
+          (TCP session not established).
+          Output: {{ bgp_summary_raw.stdout[0] }}
+        success_msg: "{{ inventory_hostname }}: No neighbors in Active state ✓"
+      when: bgp is defined
+
+    - name: "[bgp] Assert expected network prefixes are being advertised"
+      cisco.ios.ios_command:
+        commands:
+          - "show bgp ipv4 unicast {{ item }}"
+      loop: "{{ bgp.networks | default([]) }}"
+      register: prefix_check_raw
+      when: bgp is defined
+
+    - name: "[bgp] Assert advertised prefixes are in BGP table"
+      assert:
+        that:
+          - "item.stdout[0] is not search('Network not in table')"
+        fail_msg: >-
+          {{ inventory_hostname }}: Expected prefix {{ item.item }} NOT found
+          in BGP table. Verify 'network' statement and Null0 route exist.
+        success_msg: "{{ inventory_hostname }}: Prefix {{ item.item }} in BGP table ✓"
+      loop: "{{ prefix_check_raw.results | default([]) }}"
+      when: bgp is defined
+
+    # --------------------------------------------------------
+    # 4. Loopback reachability check (all routers)
+    # --------------------------------------------------------
+    - name: "[connectivity] Ping R1 loopback from current router"
+      cisco.ios.ios_command:
+        commands:
+          - ping 1.1.1.1 source Loopback0 repeat 3
+      register: ping_r1_loopback
+      ignore_errors: true
+
+    - name: "[connectivity] Ping R3 loopback from current router"
+      cisco.ios.ios_command:
+        commands:
+          - ping 3.3.3.3 source Loopback0 repeat 3
+      register: ping_r3_loopback
+      ignore_errors: true
+
+    - name: "[connectivity] Show loopback reachability results"
+      debug:
+        msg:
+          - "To 1.1.1.1: {{ ping_r1_loopback.stdout[0] | regex_search('Success rate is \\d+ percent') }}"
+          - "To 3.3.3.3: {{ ping_r3_loopback.stdout[0] | regex_search('Success rate is \\d+ percent') }}"

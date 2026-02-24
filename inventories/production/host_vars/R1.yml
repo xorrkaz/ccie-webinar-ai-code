@@ -1,0 +1,14 @@
+---
+# R1 Production BGP Configuration
+# BGP parameters mirror the CML test environment to ensure parity.
+# Only the management IP (in hosts.yml) and credentials (in vault.yml) differ.
+bgp:
+  local_asn: 65001
+  router_id: 1.1.1.1
+  neighbors:
+    - ip:           192.168.12.2
+      remote_asn:   65002
+      description:  "eBGP to R2"
+      update_source: GigabitEthernet0/1
+  networks:
+    - 10.1.1.0/24

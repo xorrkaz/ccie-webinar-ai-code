@@ -1,0 +1,14 @@
+---
+# R3 Production Configuration
+# R3 has no BGP in the baseline. BGP will be added in a later phase.
+# Parameters mirror the CML test environment to ensure parity.
+
+interfaces:
+  loopback0:          "3.3.3.3/32"
+  GigabitEthernet0/2: "192.168.23.3/24"
+
+routing:
+  static_routes:
+    - prefix:       "1.1.1.1/32"
+      next_hop:     "192.168.23.2"
+      description:  "Route to R1 loopback via R2 (transit)"

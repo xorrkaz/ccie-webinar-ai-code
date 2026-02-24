@@ -1,0 +1,44 @@
+---
+# R2 - CML Host Variables
+# Role: Transit router + eBGP speaker AS 65002, hub between R1 and R3
+# Management: GigabitEthernet0/0 (DHCP via bridge10, 192.168.10.206)
+
+# -----------------------------------------------------------------
+# Interface configuration
+# -----------------------------------------------------------------
+interfaces:
+  Loopback0:
+    description: "Router-ID and BGP source"
+    ip:           "2.2.2.2/32"
+  GigabitEthernet0/1:
+    description:  "Link to R1 (192.168.12.0/24)"
+    ip:           "192.168.12.2/24"
+  GigabitEthernet0/2:
+    description:  "Link to R3 (192.168.23.0/24)"
+    ip:           "192.168.23.2/24"
+
+# -----------------------------------------------------------------
+# Static routing  (R2 transit: needs routes to R1 and R3 loopbacks)
+# -----------------------------------------------------------------
+routing:
+  static_routes:
+    - prefix:      "1.1.1.1/32"
+      next_hop:    "192.168.12.1"
+      description: "Route to R1 loopback (Loopback0)"
+    - prefix:      "3.3.3.3/32"
+      next_hop:    "192.168.23.3"
+      description: "Route to R3 loopback (Loopback0)"
+
+# -----------------------------------------------------------------
+# BGP - R2 (AS 65002) peers with R1 (AS 65001)
+# -----------------------------------------------------------------
+bgp:
+  local_asn: 65002
+  router_id: 2.2.2.2
+  neighbors:
+    - ip:          "192.168.12.1"
+      remote_asn:  65001
+      description: "eBGP to R1"
+      update_source: GigabitEthernet0/1
+  networks:
+    - "10.2.2.0/24"
