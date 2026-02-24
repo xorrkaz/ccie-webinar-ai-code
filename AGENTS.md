@@ -10,6 +10,7 @@
   - Demo Task: Add R3 with eBGP multihop to R1
 - **Inventory**: `inventories/cml/hosts.yml`
 - **Environment Name**: `cml`
+- **Lab Running in CML**: Found in `inventories/cml/group_vars/all.yml`.  If cached lab is not found in CML, create a new one.
 
 ---
 
