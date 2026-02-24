@@ -5,7 +5,7 @@ Follows a GitOps workflow with strict test/production environment separation.
 
 ## Repository Structure
 
-```
+```text
 .
 ├── inventories/
 │   ├── cml/                         # Test environment (CML lab)
@@ -87,7 +87,7 @@ ansible routers -i inventories/production -m cisco.ios.ios_command \
 ## Documentation
 
 | Document | Description |
-|----------|-------------|
+| ----------- | ------------- |
 | [docs/promotion-workflow.md](docs/promotion-workflow.md) | GitOps workflow from dev to production |
 | [docs/credential-management.md](docs/credential-management.md) | Vault setup and security practices |
 
