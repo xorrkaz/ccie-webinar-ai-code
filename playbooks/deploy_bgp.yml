@@ -62,7 +62,7 @@
         parents: "router bgp {{ bgp.local_asn }}"
       loop: "{{ bgp.neighbors }}"
       loop_control:
-        label: "{{ item.ip }} update-source {{ item.update_source }}"
+        label: "{{ item.ip }} update-source {{ item.update_source | default('N/A') }}"
       when: item.update_source is defined
 
     - name: "[bgp] Configure neighbor ebgp-multihop (non-directly-connected peers)"
@@ -72,7 +72,7 @@
         parents: "router bgp {{ bgp.local_asn }}"
       loop: "{{ bgp.neighbors }}"
       loop_control:
-        label: "{{ item.ip }} ebgp-multihop {{ item.ebgp_multihop }}"
+        label: "{{ item.ip }} ebgp-multihop {{ item.ebgp_multihop | default('N/A') }}"
       when: item.ebgp_multihop is defined
 
     # --------------------------------------------------------
