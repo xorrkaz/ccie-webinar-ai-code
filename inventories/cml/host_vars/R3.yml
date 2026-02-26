@@ -1,18 +1,19 @@
 ---
 # R3 - CML Host Variables
-# Role: Prepared for eBGP multihop demo (no BGP in baseline)
+# Role: eBGP multihop speaker AS 65003, peers with R1 (1.1.1.1) via R2 transit
 # Management: GigabitEthernet0/0 (DHCP via bridge10, 192.168.10.212)
 #
-# NOTE: R3 is intentionally left without BGP configuration.
-#       BGP will be added to R3 in the multihop demo phase.
-#       See: docs/promotion-workflow.md for the demo walkthrough.
+# eBGP multihop configuration:
+#   R3 (3.3.3.3) <--[eBGP multihop TTL=2]--> R1 (1.1.1.1)
+#   Transit path: R3 Gi0/2 → 192.168.23.0/24 → R2 → 192.168.12.0/24 → R1
+#   Static route on R3 (1.1.1.1/32 via 192.168.23.2) enables loopback reachability.
 
 # -----------------------------------------------------------------
 # Interface configuration
 # -----------------------------------------------------------------
 interfaces:
   Loopback0:
-    description: "Router-ID (reserved for future BGP source)"
+    description: "Router-ID and eBGP multihop update-source"
     ip:          "3.3.3.3/32"
   GigabitEthernet0/2:
     description: "Link to R2 (192.168.23.0/24)"
@@ -28,16 +29,16 @@ routing:
       description: "Route to R1 loopback via R2 (transit)"
 
 # -----------------------------------------------------------------
-# BGP - NOT configured in baseline (multihop demo placeholder)
+# BGP - R3 (AS 65003) peers with R1 (1.1.1.1) via eBGP multihop
 # -----------------------------------------------------------------
-# bgp:
-#   local_asn: 65003
-#   router_id: 3.3.3.3
-#   neighbors:
-#     - ip:          "1.1.1.1"          # eBGP multihop to R1 Loopback
-#       remote_asn:  65001
-#       description: "eBGP multihop to R1"
-#       ebgp_multihop: 2
-#       update_source: Loopback0
-#   networks:
-#     - "10.3.3.0/24"
+bgp:
+  local_asn: 65003
+  router_id: 3.3.3.3
+  neighbors:
+    - ip:            "1.1.1.1"          # eBGP multihop to R1 Loopback0
+      remote_asn:    65001
+      description:   "eBGP multihop to R1"
+      ebgp_multihop: 2
+      update_source: Loopback0
+  networks:
+    - "10.3.3.0/24"

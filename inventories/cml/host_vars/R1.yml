@@ -24,7 +24,7 @@ routing:
       description: "Route to R3 loopback via R2 (transit)"
 
 # -----------------------------------------------------------------
-# BGP - R1 (AS 65001) peers with R2 (AS 65002)
+# BGP - R1 (AS 65001) peers with R2 (AS 65002) and R3 (AS 65003)
 # -----------------------------------------------------------------
 bgp:
   local_asn: 65001
@@ -34,5 +34,10 @@ bgp:
       remote_asn:  65002
       description: "eBGP to R2"
       update_source: GigabitEthernet0/1
+    - ip:            "3.3.3.3"          # eBGP multihop to R3 Loopback0
+      remote_asn:    65003
+      description:   "eBGP multihop to R3"
+      ebgp_multihop: 2
+      update_source: Loopback0
   networks:
     - "10.1.1.0/24"

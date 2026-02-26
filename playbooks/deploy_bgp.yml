@@ -55,6 +55,26 @@
       loop_control:
         label: "{{ item.ip }} (AS {{ item.remote_asn }})"
 
+    - name: "[bgp] Configure neighbor update-source (loopback or interface-based peering)"
+      cisco.ios.ios_config:
+        lines:
+          - "neighbor {{ item.ip }} update-source {{ item.update_source }}"
+        parents: "router bgp {{ bgp.local_asn }}"
+      loop: "{{ bgp.neighbors }}"
+      loop_control:
+        label: "{{ item.ip }} update-source {{ item.update_source | default('N/A') }}"
+      when: item.update_source is defined
+
+    - name: "[bgp] Configure neighbor ebgp-multihop (non-directly-connected peers)"
+      cisco.ios.ios_config:
+        lines:
+          - "neighbor {{ item.ip }} ebgp-multihop {{ item.ebgp_multihop }}"
+        parents: "router bgp {{ bgp.local_asn }}"
+      loop: "{{ bgp.neighbors }}"
+      loop_control:
+        label: "{{ item.ip }} ebgp-multihop {{ item.ebgp_multihop | default('N/A') }}"
+      when: item.ebgp_multihop is defined
+
     # --------------------------------------------------------
     # 3. Network advertisements
     #    IOS requires the network to exist in the RIB.
