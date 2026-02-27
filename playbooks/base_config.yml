@@ -107,6 +107,6 @@
     # --------------------------------------------------------
     # 5. Save running config
     # --------------------------------------------------------
-    - name: "[base] Save running configuration"
+    - name: "[base] Save running configuration to NVRAM"
       cisco.ios.ios_config:
-        save_when: changed
+        save_when: always

@@ -103,6 +103,6 @@
     # --------------------------------------------------------
     # 4. Save configuration
     # --------------------------------------------------------
-    - name: "[bgp] Save running configuration"
+    - name: "[bgp] Save running configuration to NVRAM"
       cisco.ios.ios_config:
-        save_when: changed
+        save_when: always
